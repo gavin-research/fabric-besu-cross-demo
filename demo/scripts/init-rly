@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/util/env
+source ${SCRIPT_DIR}/util/relayer-util
+FIXTURES_DIR=${DEMO_DIR}/fixtures
+
+rm -rf ${FIXTURES_DIR}
+rm -rf ${RELAYER_CONF} &> /dev/null
+
+${RLY} config init
+${RLY} chains add-dir configs/relayer/demo/
+
+# setup wallet for fabric client
+USER_MSP_CONFIG_PATH="${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/platformer.fabric-besu-cross-demo.com/users/User2@platformer.fabric-besu-cross-demo.com/msp"
+${RLY} fabric wallet populate ${CHAINID_TWO} \
+  --cert ${USER_MSP_CONFIG_PATH}/signcerts/User2@platformer.fabric-besu-cross-demo.com-cert.pem \
+  --key ${USER_MSP_CONFIG_PATH}/keystore/priv_sk
+## initialize the state of chaincode
+${RLY} fabric chaincode init ${CHAINID_TWO}
+
+# setup proxy
+mkdir -p ${FIXTURES_DIR}/tendermint/proxy0
+docker cp tendermint-proxy:/root/data/proxy0/key_seed.json  ${FIXTURES_DIR}/tendermint/proxy0/key_seed.json
+SEED=$(jq -r '.mnemonic' < ${FIXTURES_DIR}/tendermint/proxy0/key_seed.json)
+echo "Key $(${RLY} proxy-tendermint keys restore $CHAINID_PROXY $RLYKEY "$SEED") imported from proxy0 to relayer..."
+
+$RLY proxy-tendermint keys show $CHAINID_PROXY $RLYKEY
+
+# add a path between chain0 and chain1
+$RLY paths add $CHAINID_ONE $CHAINID_TWO $PATH_NAME --file=./configs/relayer/path.json
+

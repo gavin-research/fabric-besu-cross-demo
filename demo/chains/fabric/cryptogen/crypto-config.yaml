@@ -1,0 +1,36 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: fabric-besu-cross-demo.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+PeerOrgs:
+  - Name: Platformer
+    Domain: platformer.fabric-besu-cross-demo.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 2
+  - Name: OrgA
+    Domain: orga.fabric-besu-cross-demo.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1
+  - Name: OrgB
+    Domain: orgb.fabric-besu-cross-demo.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1

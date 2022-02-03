@@ -1,0 +1,20 @@
+version: '3.5'
+networks:
+  proxy:
+    name: &network-common proxy
+
+services:
+  tendermint-proxy:
+    container_name: tendermint-proxy
+    build:
+      context: ../../../
+      dockerfile: demo/chains/proxy/Dockerfile
+      args:
+        CHAINID: proxy0
+    ports:
+      - 26657:26657
+      - 26656:26656
+      - 6060:6060
+      - 9090:9090
+    networks:
+      - *network-common

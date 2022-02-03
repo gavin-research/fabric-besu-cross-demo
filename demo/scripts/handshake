@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/util/env
+source ${SCRIPT_DIR}/util/relayer-util
+
+set -x
+$RLY tx clients $PATH_NAME
+$RLY proxy update-client $PATH_NAME $CHAINID_TWO
+$RLY tx update-clients $PATH_NAME
+$RLY tx connection $PATH_NAME
+$RLY tx channel $PATH_NAME
+set +x

@@ -1,0 +1,7 @@
+{
+  "chain_id": "ibc1",
+  "wallet_label": "PlatformerMSP",
+  "channel": "erc20-channel",
+  "chaincode_id": "fabibc",
+  "connection_profile_path": "./configs/fabric/connection-profile/platformer/local.yaml"
+}

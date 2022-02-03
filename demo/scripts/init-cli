@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/util/env
+source ${SCRIPT_DIR}/util/erc721-util
+source ${SCRIPT_DIR}/util/erc20-util
+
+println "Initialize environment"
+
+rm -rf ${ERC721CLI_CONFIG_DIR} && cp -r ${DEMO_DIR}/configs/erc721cli ${ERC721CLI_CONFIG_DIR}
+
+initERC20CLIConfig

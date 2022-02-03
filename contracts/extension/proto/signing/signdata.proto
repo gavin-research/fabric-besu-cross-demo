@@ -1,0 +1,19 @@
+syntax = "proto3";
+package extension.signing;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/datachainlab/fabric-besu-cross-demo/contracts/extension/signing";
+option (gogoproto.goproto_getters_all) = false;
+
+// SignatureMessage contains a protobuf encoded Msg
+message SignatureMessage {
+    option (gogoproto.goproto_getters) = false;
+    // body_bytes is protobuf serialization of a TxBody that matches the
+    // representation in TxRaw.
+    bytes body_bytes = 1;
+
+    // auth_info_bytes is a protobuf serialization of an AuthInfo that matches the
+    // representation in TxRaw.
+    bytes auth_info_bytes = 2;
+}

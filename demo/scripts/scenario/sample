@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/../util/env
+source ${SCRIPT_DIR}/util/color
+source ${SCRIPT_DIR}/util/util
+
+debugMode ${1+x}
+
+# var
+rand=`getRand`
+TOKEN_ID=$rand
+AMOUNT=10
+
+infoln "### Sample Scenario ###"
+
+BLOCK=`${ERC721CLI_PLATFORMER} get block`
+CROSS_ADDRESS=`${ERC721CLI_PLATFORMER} cross address`
+CONTRACT_ADDRESS=`${ERC721CLI_PLATFORMER} erc721 address`
+
+infoln "Mint ERC721 token to OrgA by B2B"
+printERC721 "${ERC721CLI_PLATFORMER} erc721 mint -a ${ORGA_ADDRESS} -t ${TOKEN_ID}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Transfer(address,address,uint256) \
+--indexes 0 \
+--index-types address \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID} \
+--index-types int" 3
+
+infoln "Approve ERC721 token to B2B by OrgA"
+printERC721 "${ERC721CLI_ORGA} erc721 approve -a ${CROSS_ADDRESS} -t ${TOKEN_ID}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Approval(address,address,uint256) \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${CROSS_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID} \
+--index-types int" 3
+
+infoln "Mint ERC20 token to OrgB by B2B"
+printERC20 "${ERC20CLI_PLATFORMER} erc20 mint \
+--receiver-mspid ${OrgBMSP} \
+--receiver-clientid ${OrgBClientID} \
+--amount ${AMOUNT}"
+
+infoln "Create ContractTransaction by B2B"
+printERC20 "${ERC20CLI_PLATFORMER} ibc channel"
+chan="${LATEST_RESULT##*$'\n'}"
+
+call_info=`${ERC721CLI_PLATFORMER} cross call-info \
+--address ${CONTRACT_ADDRESS} \
+--function-name "transferFrom" \
+--arguments ${ORGB_ADDRESS} \
+--argument-types "address" \
+--arguments ${TOKEN_ID} \
+--argument-types "int"`
+
+printERC721 "${ERC721CLI_PLATFORMER} cross create-contract-tx \
+--initiator-chain-channel ${chan} \
+--signer ${ORGA_ADDRESS} \
+--call-info $call_info \
+--output-document ${DATA_DIR}/erc721-tx-1.json"
+
+call_info="{\"method\":\"transfer\",\"args\":[\"${OrgAID}\",\"10\"]}"
+printERC20 "${ERC20CLI_PLATFORMER} cross create-contract-tx \
+--signer-msp-id=${OrgBMSP} \
+--signer-client-id=${OrgBClientID} \
+--call-info=${call_info} \
+--output-document=${DATA_DIR}/erc20-tx-1.json"
+
+infoln "Create a cross InitiateTx by platformer"
+printERC20 "${ERC20CLI_PLATFORMER} cross create-initiate-tx \
+--contract-txs=${DATA_DIR}/erc20-tx-1.json,${DATA_DIR}/erc721-tx-1.json \
+--output-document=${DATA_DIR}/b2b-tx-1.json"
+
+infoln "Check states before cross-chain transactions"
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID}"
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgAMSP} --owner-clientid ${OrgAClientID}"
+OrgA_BEFORE_BALANCE=${LATEST_RESULT}
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgBMSP} --owner-clientid ${OrgBClientID}"
+OrgB_BEFORE_BALANCE=${LATEST_RESULT}
+
+infoln "Broadcast a cross InitiateTx by OrgA"
+INITIATE_CMD="${ERC20CLI_ORGA} cross send-initiate-tx \
+--initiate-tx=${DATA_DIR}/b2b-tx-1.json \
+--eth-sign-key=${OrgAEthPrivKey}"
+printERC20 "$INITIATE_CMD"
+TX_ID="${LATEST_RESULT##*$'\n'}"
+
+printERC20 "${ERC20CLI_ORGB} cross tx-auth-state ${TX_ID}"
+
+infoln "Broadcast a cross ExtSignTx by OrgB"
+printERC20 "${ERC20CLI_ORGB} cross ext-sign-tx \
+--tx-id=${TX_ID}"
+
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID}"
+
+infoln "Relay packet and ack"
+for i in {1..5}; do
+  printRelay "${RLY} query unrelayed-packets ${PATH_NAME}"
+  packet=${LATEST_RESULT}
+  printRelay "${RLY} query unrelayed-acknowledgements ${PATH_NAME}"
+  ack=${LATEST_RESULT}
+  if [ "$packet" = '{"src":[],"dst":[]}' ] && [ "$ack" = '{"src":[],"dst":[]}' ]; then
+    break
+  fi
+  sleep 5
+done
+
+infoln "Check states after cross-chain transaction"
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID}"
+TX_RES=$LATEST_RESULT
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID}"
+OWNER_RES=$LATEST_RESULT
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgAMSP} --owner-clientid ${OrgAClientID}"
+OrgA_BALANCE=$LATEST_RESULT
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgBMSP} --owner-clientid ${OrgBClientID}"
+OrgB_BALANCE=$LATEST_RESULT
+
+infoln "Assert Result"
+isCommit "${TX_RES}" "${TX_ID}"
+assertEqual ${OWNER_RES} ${ORGB_ADDRESS} "OrgB becomes the owner of ${TOKEN_ID}"
+orga_expected_balance=$((${OrgA_BEFORE_BALANCE} + ${AMOUNT}))
+assertEqual ${OrgA_BALANCE} $orga_expected_balance "OrgA receives $AMOUNT and then balance of ${OrgA_BALANCE}"
+orgb_expected_balance=$((${OrgB_BEFORE_BALANCE} - ${AMOUNT}))
+assertEqual ${OrgB_BALANCE} $orgb_expected_balance "OrgB sends $AMOUNT and then balance of ${OrgB_BALANCE}"

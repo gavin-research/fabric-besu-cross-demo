@@ -1,0 +1,20 @@
+{
+  "chain": {
+    "@type": "/relayer.chains.tendermint.config.ChainConfig",
+    "key": "testkey",
+    "chain_id": "proxy0",
+    "rpc_addr": "http://localhost:26657",
+    "account_prefix": "cosmos",
+    "gas_adjustment": 1.5,
+    "gas_prices": "0.025stake"
+  },
+  "prover": {
+    "@type": "/ibc.relay.ethmultisig.ProverConfig",
+    "diversifier": "ethmultisig-0",
+    "wallets": [{
+      "mnemonic": "canvas round flavor donkey today jaguar gesture radio achieve buzz immune mosquito",
+      "hdw_path": "m/44'/60'/0'/0/0"
+    }],
+    "prefix": "proxy/hyperledgerfabric-0/ibc"
+  }
+}

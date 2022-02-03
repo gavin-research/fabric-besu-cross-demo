@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -eu
+
+CUR_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
+source ${CUR_DIR}/color
+source ${CUR_DIR}/env
+
+ERC721CLI_CONFIG_DIR=${DEMO_DIR}/.erc721cli
+ERC721CLI_BINARY=${BIN_DIR}/erc721cli
+ERC721CLI_ORGA="${ERC721CLI_BINARY} --config ${ERC721CLI_CONFIG_DIR}/orga.yaml"
+ERC721CLI_ORGB="${ERC721CLI_BINARY} --config ${ERC721CLI_CONFIG_DIR}/orgb.yaml"
+ERC721CLI_PLATFORMER="${ERC721CLI_BINARY} --config ${ERC721CLI_CONFIG_DIR}/platformer.yaml"
+ERC721CLI_INVALID_USER="${ERC721CLI_BINARY} --config ${ERC721CLI_CONFIG_DIR}/invalid-user.yaml"
+println "erc721 command for orga: ${ERC721CLI_ORGA}"
+println "erc721 command for orgb: ${ERC721CLI_ORGB}"
+println "erc721 command for platformer: ${ERC721CLI_PLATFORMER}"
+println "erc721 command for invalid-user: ${ERC721CLI_INVALID_USER}"
+
+# Execution user
+ORGB="orgb"
+ORGA="orga"
+PLATFORMER="platformer"
+
+# Ethereum Address
+ORGB_ADDRESS="0x00731540cd6060991D6B9C57CE295998d9bC2faB"
+ORGA_ADDRESS="0xcBED645B1C1a6254f1149Df51d3591c6B3803007"
+PLATFORMER_ADDRESS="0xa89F47C6b463f74d87572b058427dA0A13ec5425"
+
+function extractHead() {
+  array=$1
+  array=${array#"["}
+  array=${array%"]"}
+  array=(${array})
+  head=${array[0]}
+  echo "${head}"
+}
+
+function printTx() {
+  tx=$1
+  echo "tx hash: $tx"
+}
+
+function getRand() {
+  local rand
+  for i in {0..32767}
+  do
+    rand=$RANDOM
+    local status=0
+    res="$(${ERC721CLI_PLATFORMER} erc721 ownerOf -t $rand 2>&1)" || status=$?
+    break
+    if $status -ne 0; then
+      break
+    fi
+  done
+  echo $rand
+}

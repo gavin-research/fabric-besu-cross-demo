@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/../util/env
+source ${SCRIPT_DIR}/util/color
+source ${SCRIPT_DIR}/util/util
+
+debugMode ${1+x}
+
+# var
+AMOUNT=10
+
+infoln "### Parallel/Concurrent Failure Scenario ###"
+
+BLOCK=`${ERC721CLI_PLATFORMER} get block`
+CROSS_ADDRESS=`${ERC721CLI_PLATFORMER} cross address`
+CONTRACT_ADDRESS=`${ERC721CLI_PLATFORMER} erc721 address`
+
+infoln "Mint ERC721 token to OrgA by B2B"
+TOKEN_ID1=`getRand`
+printERC721 "${ERC721CLI_PLATFORMER} erc721 mint -a ${ORGA_ADDRESS} -t ${TOKEN_ID1}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Transfer(address,address,uint256) \
+--indexes 0 \
+--index-types address \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID1} \
+--index-types int" 3
+
+TOKEN_ID2=`getRand`
+printERC721 "${ERC721CLI_PLATFORMER} erc721 mint -a ${ORGA_ADDRESS} -t ${TOKEN_ID2}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Transfer(address,address,uint256) \
+--indexes 0 \
+--index-types address \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID2} \
+--index-types int" 3
+
+infoln "Approve ERC721 token to B2B by OrgA"
+printERC721 "${ERC721CLI_ORGA} erc721 approve -a ${CROSS_ADDRESS} -t ${TOKEN_ID1}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Approval(address,address,uint256) \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${CROSS_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID1} \
+--index-types int" 3
+
+printERC721 "${ERC721CLI_ORGA} erc721 approve -a ${CROSS_ADDRESS} -t ${TOKEN_ID2}"
+
+waitSuccess "${ERC721CLI_PLATFORMER} get event -f ${BLOCK} \
+-c ${CONTRACT_ADDRESS} \
+-e Approval(address,address,uint256) \
+--indexes ${ORGA_ADDRESS} \
+--index-types address \
+--indexes ${CROSS_ADDRESS} \
+--index-types address \
+--indexes ${TOKEN_ID2} \
+--index-types int" 3
+
+infoln "Mint ERC20 token to OrgB by B2B"
+printERC20 "${ERC20CLI_PLATFORMER} erc20 mint \
+--receiver-mspid ${OrgBMSP} \
+--receiver-clientid ${OrgBClientID} \
+--amount ${AMOUNT}"
+
+infoln "Create ContractTransaction by B2B"
+printERC20 "${ERC20CLI_PLATFORMER} ibc channel"
+chan="${LATEST_RESULT##*$'\n'}"
+
+call_info=`${ERC721CLI_PLATFORMER} cross call-info \
+--address ${CONTRACT_ADDRESS} \
+--function-name "transferFrom" \
+--arguments ${ORGB_ADDRESS} \
+--argument-types "address" \
+--arguments ${TOKEN_ID1} \
+--argument-types "int"`
+
+printERC721 "${ERC721CLI_PLATFORMER} cross create-contract-tx \
+--initiator-chain-channel ${chan} \
+--signer ${ORGA_ADDRESS} \
+--call-info $call_info \
+--output-document ${DATA_DIR}/erc721-tx-1.json"
+
+call_info=`${ERC721CLI_PLATFORMER} cross call-info \
+--address ${CONTRACT_ADDRESS} \
+--function-name "transferFrom" \
+--arguments ${ORGB_ADDRESS} \
+--argument-types "address" \
+--arguments ${TOKEN_ID2} \
+--argument-types "int"`
+
+printERC721 "${ERC721CLI_PLATFORMER} cross create-contract-tx \
+--initiator-chain-channel ${chan} \
+--signer ${ORGA_ADDRESS} \
+--call-info $call_info \
+--output-document ${DATA_DIR}/erc721-tx-2.json"
+
+call_info="{\"method\":\"transfer\",\"args\":[\"${OrgAID}\",\"10\"]}"
+printERC20 "${ERC20CLI_PLATFORMER} cross create-contract-tx \
+--signer-msp-id=${OrgBMSP} \
+--signer-client-id=${OrgBClientID} \
+--call-info=${call_info} \
+--output-document=${DATA_DIR}/erc20-tx-1.json"
+
+call_info="{\"method\":\"transfer\",\"args\":[\"${OrgAID}\",\"10\"]}"
+printERC20 "${ERC20CLI_PLATFORMER} cross create-contract-tx \
+--signer-msp-id=${OrgBMSP} \
+--signer-client-id=${OrgBClientID} \
+--call-info=${call_info} \
+--output-document=${DATA_DIR}/erc20-tx-2.json"
+
+infoln "Create a cross InitiateTx by platformer"
+printERC20 "${ERC20CLI_PLATFORMER} cross create-initiate-tx \
+--contract-txs=${DATA_DIR}/erc20-tx-1.json,${DATA_DIR}/erc721-tx-1.json \
+--output-document=${DATA_DIR}/b2b-tx-1.json"
+
+printERC20 "${ERC20CLI_PLATFORMER} cross create-initiate-tx \
+--contract-txs=${DATA_DIR}/erc20-tx-2.json,${DATA_DIR}/erc721-tx-2.json \
+--output-document=${DATA_DIR}/b2b-tx-2.json"
+
+infoln "Check states before cross-chain transactions"
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID1}"
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID2}"
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgAMSP} --owner-clientid ${OrgAClientID}"
+OrgA_BEFORE_BALANCE=${LATEST_RESULT}
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgBMSP} --owner-clientid ${OrgBClientID}"
+OrgB_BEFORE_BALANCE=${LATEST_RESULT}
+
+infoln "Broadcast a First InitiateTx by OrgA"
+INITIATE_CMD="${ERC20CLI_ORGA} cross send-initiate-tx \
+--initiate-tx=${DATA_DIR}/b2b-tx-1.json \
+--eth-sign-key=${OrgAEthPrivKey}"
+printERC20 "$INITIATE_CMD"
+TX_ID1="${LATEST_RESULT##*$'\n'}"
+
+printERC20 "${ERC20CLI_ORGB} cross tx-auth-state ${TX_ID1}"
+
+infoln "Broadcast a First ExtSignTx by OrgB"
+printERC20 "${ERC20CLI_ORGB} cross ext-sign-tx \
+--tx-id=${TX_ID1}"
+
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID1}"
+
+infoln "Broadcast a Second InitiateTx by OrgA"
+INITIATE_CMD="${ERC20CLI_ORGA} cross send-initiate-tx \
+--initiate-tx=${DATA_DIR}/b2b-tx-2.json \
+--eth-sign-key=${OrgAEthPrivKey}"
+printERC20 "$INITIATE_CMD"
+TX_ID2="${LATEST_RESULT##*$'\n'}"
+
+printERC20 "${ERC20CLI_ORGB} cross tx-auth-state ${TX_ID2}"
+
+infoln "Broadcast a Second ExtSignTx by OrgB"
+printERC20 "${ERC20CLI_ORGB} cross ext-sign-tx \
+--tx-id=${TX_ID2}"
+
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID2}"
+
+set +e
+# Relay to Proxy
+sleep 3
+${RLY} query unrelayed-packets ${PATH_NAME}
+${RLY} tx relay ${PATH_NAME}
+
+# Relay to Besu
+sleep 3
+${RLY} query unrelayed-packets ${PATH_NAME}
+${RLY} tx relay ${PATH_NAME}
+
+# Relay to Fabric
+sleep 3
+${RLY} query unrelayed-acknowledgements ${PATH_NAME}
+${RLY} tx relay-acknowledgements ${PATH_NAME}
+set -e
+
+infoln "Check states after cross-chain transaction"
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID1}"
+TX_RES1=$LATEST_RESULT
+printERC20 "${ERC20CLI_ORGB} cross coordinator-state ${TX_ID2}"
+TX_RES2=$LATEST_RESULT
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID1}"
+OWNER_RES1=$LATEST_RESULT
+printERC721 "${ERC721CLI_PLATFORMER} erc721 ownerOf -t ${TOKEN_ID2}"
+OWNER_RES2=$LATEST_RESULT
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgAMSP} --owner-clientid ${OrgAClientID}"
+OrgA_BALANCE=$LATEST_RESULT
+printERC20 "${ERC20CLI_PLATFORMER} erc20 balanceOf --owner-mspid ${OrgBMSP} --owner-clientid ${OrgBClientID}"
+OrgB_BALANCE=$LATEST_RESULT
+
+infoln "Assert Result"
+isCommit "${TX_RES1}" "${TX_ID1}"
+isAbort "${TX_RES2}" "${TX_ID2}"
+assertEqual ${OWNER_RES1} ${ORGB_ADDRESS} "OrgB becomes the owner of ${TOKEN_ID1}"
+assertEqual ${OWNER_RES2} ${ORGA_ADDRESS} "OrgB doesn't become the owner of ${TOKEN_ID2}"
+orga_expected_balance=$((${OrgA_BEFORE_BALANCE} + ${AMOUNT}))
+assertEqual ${OrgA_BALANCE} $orga_expected_balance "OrgA receives $AMOUNT and then balance of ${OrgA_BALANCE}"
+orgb_expected_balance=$((${OrgB_BEFORE_BALANCE} - ${AMOUNT}))
+assertEqual ${OrgB_BALANCE} $orgb_expected_balance "OrgB sends $AMOUNT and then balance of ${OrgB_BALANCE}"

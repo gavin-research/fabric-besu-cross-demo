@@ -1,0 +1,21 @@
+name: Zip
+on:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  zip:
+      name: zip
+      runs-on: ubuntu-20.04
+      env:
+        ARTIFACT_NAME: fabric-besu-cross-demo
+      steps:
+        - uses: actions/checkout@v2
+        - name: Zip to avoid permission loss by upload-artifact
+          run: zip -r ${{ env.ARTIFACT_NAME }}.zip . -x "*.git*"
+        - uses: actions/upload-artifact@v2
+          with:
+            path: ${{ env.ARTIFACT_NAME }}.zip
+            retention-days: 10

@@ -1,0 +1,71 @@
+name: Demo
+on: [push, pull_request]
+
+jobs:
+  demo:
+    name: demo
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      - name: Set up Node.js 12
+        uses: actions/setup-node@v2
+        with:
+          node-version: '12'
+      - uses: actions/checkout@v2
+      - name: Cache go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: |
+            ${{ github.workspace }}/contracts/erc721/node_modules
+          key: ${{ runner.os }}-erc721-contract-${{ hashFiles('contracts/erc721/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-erc721-contract-
+      - name: Build Demo Environment
+        working-directory: demo
+        run: |
+          make build
+      - name: Start Network
+        working-directory: demo
+        run: |
+          make network
+      - name: Run Demo
+        working-directory: demo
+        run: |
+          make demo
+  unit-test:
+    name: unit-test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - uses: actions/checkout@v2
+      - name: Cache go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run Unit Test
+        working-directory: contracts/extension
+        run: |
+          make test
+

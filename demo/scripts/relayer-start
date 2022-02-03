@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source $(cd $(dirname ${BASH_SOURCE:-$0}); pwd)/util/env
+source ${SCRIPT_DIR}/util/relayer-util
+
+$RLY service start $PATH_NAME

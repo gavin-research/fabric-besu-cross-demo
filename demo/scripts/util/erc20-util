@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -eu
+
+CUR_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
+source ${CUR_DIR}/color
+source ${CUR_DIR}/env
+
+# erc20
+ERC20CLI_BINARY=${BIN_DIR}/erc20cli
+ERC20CLI_CONFIG_DIR=${DEMO_DIR}/.erc20cli
+
+ERC20CLI_ORGA="${ERC20CLI_BINARY} --home ${ERC20CLI_CONFIG_DIR}/orga"
+ERC20CLI_ORGB="${ERC20CLI_BINARY} --home ${ERC20CLI_CONFIG_DIR}/orgb"
+ERC20CLI_PLATFORMER="${ERC20CLI_BINARY} --home ${ERC20CLI_CONFIG_DIR}/platformer"
+println "erc20 command for orga: $ERC20CLI_ORGA"
+println "erc20 command for orgb: $ERC20CLI_ORGB"
+println "erc20 command for platformer: $ERC20CLI_PLATFORMER"
+
+OrgAMSP="OrgAMSP"
+OrgBMSP="OrgBMSP"
+PlatformerMSP="PlatformerMSP"
+
+OrgAClientID="eDUwOTo6Q049VXNlcjFAb3JnYS5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPVT1jbGllbnQsTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUzo6Q049Y2Eub3JnYS5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPPW9yZ2EuZmFicmljLWJlc3UtY3Jvc3MtZGVtby5jb20sTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUw=="
+OrgBClientID="eDUwOTo6Q049VXNlcjFAb3JnYi5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPVT1jbGllbnQsTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUzo6Q049Y2Eub3JnYi5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPPW9yZ2IuZmFicmljLWJlc3UtY3Jvc3MtZGVtby5jb20sTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUw=="
+PlatformerClientID="eDUwOTo6Q049VXNlcjFAcGxhdGZvcm1lci5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPVT1jbGllbnQsTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUzo6Q049Y2EucGxhdGZvcm1lci5mYWJyaWMtYmVzdS1jcm9zcy1kZW1vLmNvbSxPPXBsYXRmb3JtZXIuZmFicmljLWJlc3UtY3Jvc3MtZGVtby5jb20sTD1TYW4gRnJhbmNpc2NvLFNUPUNhbGlmb3JuaWEsQz1VUw=="
+
+OrgAID="7908a9df932dbe0f997894a423097cb5ba51ab409be00fc5bfa82d22f432f2bb"
+OrgBID="d3fb32aef592d42902b303a2f57c17abe81df9d201c902de1fdb7fa85ac35ea1"
+PlatformerID="ae13dd3dbf43f5e55aafda0d539bfa3ce6a33d2147ffd11a0b39a2c55c42bd15"
+
+OrgAEthPrivKey=713071a0b7101f177ae9c9ab0412eb7e43812bd289650f8db63f3055f2bcb029
+OrgBEthPrivKey=043a3427c36481e3cce70f5e6738b5f4d1a7e87fa90aa833f4bf2d3d690d4919
+PlatformerEthPrivKey=e517af47112e4f501afb26e4f34eadc8b0ad8eadaf4962169fc04bc8ddbfe091
+
+###
+# Initialize ERC20CLI configurations
+##
+function initERC20CLIConfig() {
+  ${ERC20CLI_ORGA} config init \
+  --config ${DEMO_DIR}/configs/erc20cli/orga/config.json \
+  --cert ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/orga.fabric-besu-cross-demo.com/users/User1@orga.fabric-besu-cross-demo.com/msp/signcerts/User1@orga.fabric-besu-cross-demo.com-cert.pem \
+  --key ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/orga.fabric-besu-cross-demo.com/users/User1@orga.fabric-besu-cross-demo.com/msp/keystore/priv_sk
+
+  ${ERC20CLI_ORGB} config init \
+  --config ${DEMO_DIR}/configs/erc20cli/orgb/config.json \
+  --cert ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/orgb.fabric-besu-cross-demo.com/users/User1@orgb.fabric-besu-cross-demo.com/msp/signcerts/User1@orgb.fabric-besu-cross-demo.com-cert.pem \
+  --key ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/orgb.fabric-besu-cross-demo.com/users/User1@orgb.fabric-besu-cross-demo.com/msp/keystore/priv_sk
+
+  ${ERC20CLI_PLATFORMER} config init \
+  --config ${DEMO_DIR}/configs/erc20cli/platformer/config.json \
+  --cert ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/platformer.fabric-besu-cross-demo.com/users/User1@platformer.fabric-besu-cross-demo.com/msp/signcerts/User1@platformer.fabric-besu-cross-demo.com-cert.pem \
+  --key ${DEMO_DIR}/chains/fabric/organizations/peerOrganizations/platformer.fabric-besu-cross-demo.com/users/User1@platformer.fabric-besu-cross-demo.com/msp/keystore/priv_sk
+}

@@ -1,0 +1,50 @@
+{
+  "chain": {
+    "@type": "/relayer.chains.ethereum.config.ChainConfig",
+    "chain_id": "ibc0",
+    "eth_chain_id": 2018,
+    "rpc_addr": "http://localhost:8545",
+    "hdw_mnemonic": "math razor capable expose worth grape metal sunset metal sudden usage scheme",
+    "hdw_path": "m/44'/60'/0'/0/0",
+    "ibc_host_address": "0x87d7778dbc81251D5A0D78DFD8a0C359887E98C9",
+    "ibc_handler_address": "0x37978908bac82F0191b674235A0fEEE31e7524a4"
+  },
+  "prover": {
+    "@type": "/ibc.proxy.prover.v1.ProverConfig",
+    "prover": {
+      "@type": "/ibc.trustedethereum.prover.v1.ProverConfig",
+      "chain_id": "ibc0",
+      "eth_chain_id": 2018,
+      "rpc_addr": "http://localhost:8545",
+      "hdw_mnemonic": "math razor capable expose worth grape metal sunset metal sudden usage scheme",
+      "hdw_path": "m/44'/60'/0'/0/0",
+      "ibc_host_address": "0x87d7778dbc81251D5A0D78DFD8a0C359887E98C9",
+      "diversifier": "ibc0-diversifier"
+    },
+    "downstream": {
+      "proxy_chain": {
+        "@type": "/ibc.proxy.tendermint.v1.ProxyChainConfig",
+        "chain_config": {
+          "key": "testkey",
+          "chain_id": "proxy0",
+          "rpc_addr": "http://localhost:26657",
+          "account_prefix": "cosmos",
+          "gas_adjustment": 1.5,
+          "gas_prices": "0.025stake"
+        }
+      },
+      "proxy_chain_prover": {
+        "@type": "/ibc.relay.ethmultisig.ProxyChainProverConfig",
+        "prover_config": {
+          "diversifier": "ethmultisig-0",
+          "wallets": [{
+            "mnemonic": "canvas round flavor donkey today jaguar gesture radio achieve buzz immune mosquito",
+            "hdw_path": "m/44'/60'/0'/0/0"
+          }],
+          "prefix": "ibc"
+        }
+      },
+      "upstream_client_id": "hyperledgerfabric-0"
+    }
+  }
+}

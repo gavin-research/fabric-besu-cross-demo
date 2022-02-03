@@ -1,0 +1,10 @@
+syntax = "proto3";
+package erc20mgr;
+
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/datachainlab/fabric-besu-cross-demo/contracts/erc20/erc20mgr/types";
+option (gogoproto.goproto_getters_all) = false;
+
+message FabricAuthExtension {}

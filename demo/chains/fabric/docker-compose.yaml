@@ -1,0 +1,152 @@
+version: '3.5'
+networks:
+  erc20:
+    name: &network-common erc20
+
+services:
+  fabric-orderer.fabric-besu-cross-demo.com:
+    container_name: fabric-orderer.fabric-besu-cross-demo.com
+    image: hyperledger/fabric-orderer:${IMAGE_TAG}
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=file
+      - ORDERER_GENERAL_BOOTSTRAPFILE=orderer.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/msp
+      - GRPC_TRACE=all=true,
+      - GRPC_VERBOSITY=info
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./configtx/orderer.yaml:/var/hyperledger/orderer/orderer.yaml
+      - ./organizations/ordererOrganizations/fabric-besu-cross-demo.com/orderers/orderer.fabric-besu-cross-demo.com/msp:/etc/hyperledger/msp
+      - ./artifacts/orderer.block:/etc/hyperledger/fabric/orderer.block
+    ports:
+      - 7050:7050
+    networks:
+      - *network-common
+
+  fabric-peer0.platformer.fabric-besu-cross-demo.com:
+    container_name: fabric-peer0.platformer.fabric-besu-cross-demo.com
+    image: hyperledger/fabric-peer:${IMAGE_TAG}
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=fabric-peer0.platformer.fabric-besu-cross-demo.com
+      - CORE_PEER_ADDRESS=fabric-peer0.platformer.fabric-besu-cross-demo.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=fabric-peer0.platformer.fabric-besu-cross-demo.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=fabric-peer0.platformer.fabric-besu-cross-demo.com:7051
+      - CORE_PEER_CHAINCODEADDRESS=fabric-peer0.platformer.fabric-besu-cross-demo.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_LOCALMSPID=PlatformerMSP
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./organizations/peerOrganizations/platformer.fabric-besu-cross-demo.com/peers/peer0.platformer.fabric-besu-cross-demo.com/msp:/etc/hyperledger/msp
+      - ./configtx/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - ./external-builders/bin:/builders/external/bin
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 7051:7051
+      - 7052:7052
+      - 7053:7053
+    depends_on:
+      - fabric-orderer.fabric-besu-cross-demo.com
+    networks:
+      - *network-common
+
+  fabric-peer0.orga.fabric-besu-cross-demo.com:
+    container_name: fabric-peer0.orga.fabric-besu-cross-demo.com
+    image: hyperledger/fabric-peer:${IMAGE_TAG}
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=fabric-peer0.orga.fabric-besu-cross-demo.com
+      - CORE_PEER_ADDRESS=fabric-peer0.orga.fabric-besu-cross-demo.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=fabric-peer0.orga.fabric-besu-cross-demo.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=fabric-peer0.orga.fabric-besu-cross-demo.com:8051
+      - CORE_PEER_CHAINCODEADDRESS=fabric-peer0.orga.fabric-besu-cross-demo.com:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_LOCALMSPID=OrgAMSP
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./organizations/peerOrganizations/orga.fabric-besu-cross-demo.com/peers/peer0.orga.fabric-besu-cross-demo.com/msp:/etc/hyperledger/msp
+      - ./configtx/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - ./external-builders/bin:/builders/external/bin
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 8051:8051
+      - 8052:8052
+      - 8053:8053
+    depends_on:
+      - fabric-orderer.fabric-besu-cross-demo.com
+    networks:
+      - *network-common
+
+  fabric-peer0.orgb.fabric-besu-cross-demo.com:
+    container_name: fabric-peer0.orgb.fabric-besu-cross-demo.com
+    image: hyperledger/fabric-peer:${IMAGE_TAG}
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=fabric-peer0.orgb.fabric-besu-cross-demo.com
+      - CORE_PEER_ADDRESS=fabric-peer0.orgb.fabric-besu-cross-demo.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=fabric-peer0.orgb.fabric-besu-cross-demo.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=fabric-peer0.orgb.fabric-besu-cross-demo.com:9051
+      - CORE_PEER_CHAINCODEADDRESS=fabric-peer0.orgb.fabric-besu-cross-demo.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_LOCALMSPID=OrgBMSP
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./organizations/peerOrganizations/orgb.fabric-besu-cross-demo.com/peers/peer0.orgb.fabric-besu-cross-demo.com/msp:/etc/hyperledger/msp
+      - ./configtx/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - ./external-builders/bin:/builders/external/bin
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 9051:9051
+      - 9052:9052
+      - 9053:9053
+    depends_on:
+      - fabric-orderer.fabric-besu-cross-demo.com
+    networks:
+      - *network-common
+
+  fabric-chaincode.platformer.fabric-besu-cross-demo.com:
+    container_name: fabric-chaincode.platformer.fabric-besu-cross-demo.com
+    image: fabric-chaincode-fabibc:latest
+    environment:
+      - CHAINCODE_ADDRESS=0.0.0.0:17051
+    volumes:
+      - ./build/Platformer-fabibc-ccid.txt:/root/ccid.txt
+    ports:
+      - 17051:17051
+    networks:
+      - *network-common
+
+  fabric-chaincode.orga.fabric-besu-cross-demo.com:
+    container_name: fabric-chaincode.orga.fabric-besu-cross-demo.com
+    image: fabric-chaincode-fabibc:latest
+    environment:
+      - CHAINCODE_ADDRESS=0.0.0.0:18051
+    volumes:
+      - ./build/OrgA-fabibc-ccid.txt:/root/ccid.txt
+    ports:
+      - 18051:18051
+    networks:
+      - *network-common
+
+  fabric-chaincode.orgb.fabric-besu-cross-demo.com:
+    container_name: fabric-chaincode.orgb.fabric-besu-cross-demo.com
+    image: fabric-chaincode-fabibc:latest
+    environment:
+      - CHAINCODE_ADDRESS=0.0.0.0:19051
+    volumes:
+      - ./build/OrgB-fabibc-ccid.txt:/root/ccid.txt
+    ports:
+      - 19051:19051
+    networks:
+      - *network-common

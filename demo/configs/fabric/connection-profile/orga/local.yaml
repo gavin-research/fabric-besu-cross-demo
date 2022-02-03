@@ -1,0 +1,80 @@
+---
+# https://github.com/hyperledger/fabric-sdk-go/blob/master/test/fixtures/config/config_e2e.yaml
+name: orga
+version: 1.0.0
+client:
+  organization: OrgA
+  logging:
+    level: error
+  connection:
+    timeout:
+      peer:
+        endorser: '300'
+
+organizations:
+  OrdererOrg:
+    mspid: OrdererMSP
+  OrgA:
+    mspid: OrgAMSP
+    peers:
+      - fabric-peer0.orga.fabric-besu-cross-demo.com
+
+channels:
+  erc20-channel:
+    orderers:
+      - fabric-orderer.fabric-besu-cross-demo.com
+    peers:
+      fabric-peer0.orga.fabric-besu-cross-demo.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+orderers:
+  fabric-orderer.fabric-besu-cross-demo.com:
+    url: grpc://fabric-orderer.fabric-besu-cross-demo.com:7050
+    grpcOptions:
+      ssl-target-name-override: fabric-orderer.fabric-besu-cross-demo.com
+      hostnameOverride: fabric-orderer.fabric-besu-cross-demo.com
+      allow-insecure: true
+
+peers:
+  fabric-peer0.platformer.fabric-besu-cross-demo.com:
+    url: grpc://fabric-peer0.platformer.fabric-besu-cross-demo.com:7051
+    grpcOptions:
+      ssl-target-name-override: fabric-peer0.platformer.fabric-besu-cross-demo.com
+      hostnameOverride: fabric-peer0.platformer.fabric-besu-cross-demo.com
+      allow-insecure: true
+  fabric-peer0.orga.fabric-besu-cross-demo.com:
+    url: grpc://fabric-peer0.orga.fabric-besu-cross-demo.com:8051
+    grpcOptions:
+      ssl-target-name-override: fabric-peer0.orga.fabric-besu-cross-demo.com
+      hostnameOverride: fabric-peer0.orga.fabric-besu-cross-demo.com
+      allow-insecure: true
+  fabric-peer0.orgb.fabric-besu-cross-demo.com:
+    url: grpc://fabric-peer0.orgb.fabric-besu-cross-demo.com:9051
+    grpcOptions:
+      ssl-target-name-override: fabric-peer0.orgb.fabric-besu-cross-demo.com
+      hostnameOverride: fabric-peer0.orgb.fabric-besu-cross-demo.com
+      allow-insecure: true
+
+### https://github.com/hyperledger/fabric-sdk-go/blob/master/test/fixtures/config/overrides/local_entity_matchers.yaml
+entityMatchers:
+  peer:
+    - pattern: fabric-peer0.platformer.fabric-besu-cross-demo.com
+      urlSubstitutionExp: localhost:7051
+      sslTargetOverrideUrlSubstitutionExp: fabric-peer0.platformer.fabric-besu-cross-demo.com
+      mappedHost: fabric-peer0.platformer.fabric-besu-cross-demo.com
+    - pattern: fabric-peer0.orga.fabric-besu-cross-demo.com
+      urlSubstitutionExp: localhost:8051
+      sslTargetOverrideUrlSubstitutionExp: fabric-peer0.orga.fabric-besu-cross-demo.com
+      mappedHost: fabric-peer0.orga.fabric-besu-cross-demo.com
+    - pattern: fabric-peer0.orgb.fabric-besu-cross-demo.com
+      urlSubstitutionExp: localhost:9051
+      sslTargetOverrideUrlSubstitutionExp: fabric-peer0.orgb.fabric-besu-cross-demo.com
+      mappedHost: fabric-peer0.orgb.fabric-besu-cross-demo.com
+  orderer:
+    - pattern: fabric-orderer.fabric-besu-cross-demo.com
+      urlSubstitutionExp: localhost:7050
+      sslTargetOverrideUrlSubstitutionExp: fabric-orderer.fabric-besu-cross-demo.com
+      mappedHost: fabric-orderer.fabric-besu-cross-demo.com

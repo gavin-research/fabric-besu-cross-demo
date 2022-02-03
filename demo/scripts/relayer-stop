@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+pid=`pgrep -of relayer-start`
+
+if [ -n "$pid" ]; then
+  pkill -P $pid
+fi

@@ -1,0 +1,11 @@
+syntax = "proto3";
+package extension.types;
+
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/datachainlab/fabric-besu-cross-demo/contracts/extension/types";
+option (gogoproto.goproto_getters_all) = false;
+
+// BesuAuthExtension authenticates a tx signed with Ethereum private keys
+message BesuAuthExtension {}
